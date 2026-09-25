@@ -7,23 +7,23 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "users")
-public class User {
+@Table(name = "products")
+public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_user;
+    private Long id_product;
 
     private String name;
 
-    private String email;
+    private Long id_category;
 
-    public Long getIdUser() {
-        return id_user;
+    public Long getIdProduct() {
+        return id_product;
     }
 
-    public void setIdUser(Long id_user) {
-        this.id_user = id_user;
+    public void setIdProduct(Long id_product) {
+        this.id_product = id_product;
     }
 
     public String getName() {
@@ -34,11 +34,11 @@ public class User {
         this.name = name;
     }
 
-    public String getEmail() {
-        return email;
+    public Long getIdCategory() {
+        return id_category;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setIdCategory(Long id_category) {
+        this.id_category = id_category;
     }
 }
