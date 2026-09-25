@@ -66,6 +66,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Loads variables from .env into the Spring Environment -->
+		<dependency>
+			<groupId>me.paulschwarz</groupId>
+			<artifactId>spring-dotenv</artifactId>
+			<version>4.0.0</version>
+		</dependency>
+
 		<!-- Adds validation support for entity classes -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
