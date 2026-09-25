@@ -2,6 +2,8 @@
 
 Projeto base para experimentos e aprendizado com Spring Boot. Use este repositório para criar endpoints, explorar configuracoes, escrever testes e entender o ciclo de desenvolvimento de uma aplicacao web Java.
 
+> **Sobre o uso de IA neste projeto:** este é um projeto de estudo. A maior parte do código é escrita e pensada pelo autor, estudando os padrões corretos antes de aplicá-los. A IA é usada como apoio pontual — para validar decisões, explicar erros e sugerir boas práticas — não para gerar as funcionalidades do zero. Veja [CLAUDE.md](CLAUDE.md) para as diretrizes completas de como a IA deve colaborar aqui.
+
 ## Tecnologias
 
 - Java 21
