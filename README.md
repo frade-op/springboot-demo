@@ -10,6 +10,9 @@ Projeto base para experimentos e aprendizado com Spring Boot. Use este repositó
 - Spring Web MVC, para criar endpoints HTTP
 - Spring Boot Actuator, para recursos de monitoramento
 - Spring Web MVC Test, para testes da camada web
+- Spring Data JPA, para persistencia com Hibernate
+- Spring Boot Validation, para validar dados de entrada
+- MySQL Connector/J (`com.mysql:mysql-connector-j`), driver de conexao com MySQL
 
 ## Estrutura
 
@@ -56,6 +59,27 @@ Para executar os testes:
 ```powershell
 .\mvnw.cmd test
 ```
+
+## Atualizar dependencias Maven
+
+Sempre que uma dependencia for adicionada ou alterada no `pom.xml`, siga estes passos:
+
+1. Edite o `pom.xml` e adicione o bloco `<dependency>` com `groupId` e `artifactId`. Como o projeto usa o `spring-boot-starter-parent` como parent, a `<version>` normalmente nao precisa ser informada, pois ja e gerenciada automaticamente.
+2. Baixe as novas dependencias executando, na raiz do projeto:
+
+```powershell
+.\mvnw.cmd package
+```
+
+Esse comando baixa as dependencias do repositorio Maven, compila o projeto e roda os testes. Use `BUILD SUCCESS` no final do log como confirmacao de que tudo foi resolvido corretamente.
+
+Se quiser apenas baixar as dependencias, sem compilar nem testar:
+
+```powershell
+.\mvnw.cmd dependency:resolve
+```
+
+Em caso de erro `BUILD FAILURE`, verifique a mensagem: geralmente indica `groupId`/`artifactId` incorretos ou versao ausente para dependencias que nao sao gerenciadas pelo parent do Spring Boot.
 
 ## Proximos experimentos
 
