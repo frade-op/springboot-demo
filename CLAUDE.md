@@ -44,6 +44,7 @@ Novas classes devem seguir essa mesma separação por camada.
 - MySQL local, schema `springboot-demo`.
 - Conexao configurada em `src/main/resources/application.properties`, usando variaveis `DB_PORT`, `DB_USER`, `DB_PASSWORD` carregadas do `.env` (arquivo nao versionado, listado no `.gitignore`).
 - `spring.jpa.hibernate.ddl-auto=none`: o Hibernate nao cria nem altera tabelas automaticamente. As tabelas ja existem no schema e sao geridas manualmente.
+- Colunas no banco usam `snake_case` (ex.: `id_user`). Campos das entidades JPA devem usar `camelCase` (ex.: `idUser`) — o Hibernate converte automaticamente entre os dois via `PhysicalNamingStrategy` padrao do Spring Boot, sem precisar de `@Column`. Campos em `snake_case` nas entidades ja causaram bug de deserializacao no Jackson (JSON esperava `idUser`, nao `id_user`).
 
 ## Regras de seguranca
 

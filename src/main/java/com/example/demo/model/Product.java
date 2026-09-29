@@ -12,18 +12,18 @@ public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_product;
+    private Long idProduct;
 
     private String name;
 
-    private Long id_category;
+    private Long idCategory;
 
     public Long getIdProduct() {
-        return id_product;
+        return idProduct;
     }
 
-    public void setIdProduct(Long id_product) {
-        this.id_product = id_product;
+    public void setIdProduct(Long idProduct) {
+        this.idProduct = idProduct;
     }
 
     public String getName() {
@@ -35,10 +35,10 @@ public class Product {
     }
 
     public Long getIdCategory() {
-        return id_category;
+        return idCategory;
     }
 
-    public void setIdCategory(Long id_category) {
-        this.id_category = id_category;
+    public void setIdCategory(Long idCategory) {
+        this.idCategory = idCategory;
     }
 }

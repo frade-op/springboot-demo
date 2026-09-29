@@ -22,7 +22,21 @@ Projeto base para experimentos e aprendizado com Spring Boot. Use este repositó
 src/
 |- main/
 |  |- java/com/example/demo/
-|  |  `- DemoApplication.java
+|  |  |- DemoApplication.java
+|  |  |- controller/
+|  |  |  |- HelloController.java
+|  |  |  |- ProductController.java
+|  |  |  `- UserController.java
+|  |  |- model/
+|  |  |  |- Product.java
+|  |  |  |- User.java
+|  |  |  |- Role.java
+|  |  |  `- UserRoles.java
+|  |  `- repository/
+|  |     |- ProductRepository.java
+|  |     |- UserRepository.java
+|  |     |- RoleRepository.java
+|  |     `- UserRolesRepository.java
 |  `- resources/
 |     `- application.properties
 `- test/
@@ -30,7 +44,16 @@ src/
       `- DemoApplicationTests.java
 ```
 
-A classe `DemoApplication` e o ponto de entrada da aplicacao. Classes como controllers devem ficar em `com.example.demo` ou em seus subpacotes, para serem encontradas automaticamente pelo Spring Boot.
+A classe `DemoApplication` e o ponto de entrada da aplicacao. Controllers, models e repositories ficam separados por camada dentro de `com.example.demo`, para serem encontrados automaticamente pelo Spring Boot.
+
+## Modelo de dados atual
+
+- `Product`: produtos, vinculados a uma categoria por `idCategory` (sem relacionamento JPA ainda, apenas o id bruto).
+- `User`: usuarios da aplicacao (`name`, `email`).
+- `Role`: papeis/perfis (`name`), usados para controle de acesso.
+- `UserRoles`: tabela de associacao entre `User` e `Role` (`idUser`, `idRole`), tambem sem relacionamento JPA ainda.
+
+Os campos das entidades seguem `camelCase` (ex.: `idUser`, `idCategory`), e o Hibernate converte automaticamente para `snake_case` nas colunas do banco (`id_user`, `id_category`) via `PhysicalNamingStrategy` padrao do Spring Boot.
 
 ## Configuracao atual
 
@@ -85,7 +108,15 @@ Em caso de erro `BUILD FAILURE`, verifique a mensagem: geralmente indica `groupI
 
 ## Proximos experimentos
 
-- Criar um controller com `@RestController` e `@GetMapping`.
+- Criar controllers para `Role` e `UserRoles` (ainda so existem os repositories).
 - Adicionar propriedades ao `application.properties`, como `server.port`.
 - Criar testes para endpoints HTTP.
 - Consultar endpoints do Actuator, como `http://localhost:8080/actuator/health`.
+
+### Proxima etapa planejada: autenticacao e validacao
+
+Com `User`, `Role` e `UserRoles` no lugar, o proximo passo do estudo e implementar autenticacao e validacao de cada requisicao, usando esses papeis para autorizacao. Ideias para explorar:
+
+- Adicionar `spring-boot-starter-security` e configurar autenticacao (ex.: login com usuario/senha ou JWT).
+- Usar `UserRoles` para autorizar endpoints por papel (`@PreAuthorize`, `hasRole(...)`).
+- Adicionar validacao de entrada (`@NotBlank`, `@Email`, etc.) nos DTOs/entidades antes de persistir dados vindos de requisicoes.
