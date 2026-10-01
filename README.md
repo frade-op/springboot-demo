@@ -2,7 +2,7 @@
 
 Projeto base para experimentos e aprendizado com Spring Boot. Use este repositório para criar endpoints, explorar configuracoes, escrever testes e entender o ciclo de desenvolvimento de uma aplicacao web Java.
 
-> **Sobre o uso de IA neste projeto:** este é um projeto de estudo. A maior parte do código é escrita e pensada pelo autor, estudando os padrões corretos antes de aplicá-los. A IA é usada como apoio pontual — para validar decisões, explicar erros e sugerir boas práticas — não para gerar as funcionalidades do zero. Veja [CLAUDE.md](CLAUDE.md) para as diretrizes completas de como a IA deve colaborar aqui.
+> **Sobre o uso de assistentes de codificação:** este é um projeto de estudo. A maior parte do código é escrita e pensada pelo autor, estudando os padrões corretos antes de aplicá-los. Os assistentes são usados como apoio pontual — para validar decisões, explicar erros e sugerir boas práticas — não para gerar funcionalidades do zero. Veja [AGENTS.md](AGENTS.md) para as diretrizes de colaboração.
 
 ## Tecnologias
 
@@ -13,6 +13,7 @@ Projeto base para experimentos e aprendizado com Spring Boot. Use este repositó
 - Spring Boot Actuator, para recursos de monitoramento
 - Spring Web MVC Test, para testes da camada web
 - Spring Data JPA, para persistencia com Hibernate
+- Spring Security, para autenticacao e autorizacao (em implementacao)
 - Spring Boot Validation, para validar dados de entrada
 - MySQL Connector/J (`com.mysql:mysql-connector-j`), driver de conexao com MySQL
 
@@ -23,6 +24,8 @@ src/
 |- main/
 |  |- java/com/example/demo/
 |  |  |- DemoApplication.java
+|  |  |- config/
+|  |  |  `- PasswordEncoderConfig.java
 |  |  |- controller/
 |  |  |  |- HelloController.java
 |  |  |  |- ProductController.java
@@ -32,11 +35,13 @@ src/
 |  |  |  |- User.java
 |  |  |  |- Role.java
 |  |  |  `- UserRoles.java
-|  |  `- repository/
+|  |  |- repository/
 |  |     |- ProductRepository.java
 |  |     |- UserRepository.java
 |  |     |- RoleRepository.java
 |  |     `- UserRolesRepository.java
+|  |  `- service/
+|  |     `- DatabaseUserDetailsService.java
 |  `- resources/
 |     `- application.properties
 `- test/
@@ -49,7 +54,7 @@ A classe `DemoApplication` e o ponto de entrada da aplicacao. Controllers, model
 ## Modelo de dados atual
 
 - `Product`: produtos, vinculados a uma categoria por `idCategory` (sem relacionamento JPA ainda, apenas o id bruto).
-- `User`: usuarios da aplicacao (`name`, `email`).
+- `User`: usuarios da aplicacao (`name`, `email`, `passwordHash`). O hash da senha e omitido da serializacao JSON.
 - `Role`: papeis/perfis (`name`), usados para controle de acesso.
 - `UserRoles`: tabela de associacao entre `User` e `Role` (`idUser`, `idRole`), tambem sem relacionamento JPA ainda.
 
@@ -61,11 +66,16 @@ O arquivo `src/main/resources/application.properties` contem:
 
 ```properties
 spring.application.name=demo
+spring.datasource.url=jdbc:mysql://localhost:${DB_PORT:}/springboot-demo
+spring.datasource.username=${DB_USER:}
+spring.datasource.password=${DB_PASSWORD:}
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=true
 ```
 
-Essa propriedade define o nome da aplicacao como `demo`.
+As credenciais sao lidas de variaveis locais e nao devem ser adicionadas ao repositorio. Como `ddl-auto=none`, alteracoes no schema MySQL precisam ser feitas manualmente.
 
-As demais configuracoes, como a porta HTTP, usam os padroes do Spring Boot. Por isso, a aplicacao inicia na porta `8080` por padrao.
+Sem configuracao diferente, a aplicacao inicia na porta `8080` por padrao.
 
 ## Executar
 
@@ -113,10 +123,17 @@ Em caso de erro `BUILD FAILURE`, verifique a mensagem: geralmente indica `groupI
 - Criar testes para endpoints HTTP.
 - Consultar endpoints do Actuator, como `http://localhost:8080/actuator/health`.
 
-### Proxima etapa planejada: autenticacao e validacao
+## Autenticacao e autorizacao (em andamento)
 
-Com `User`, `Role` e `UserRoles` no lugar, o proximo passo do estudo e implementar autenticacao e validacao de cada requisicao, usando esses papeis para autorizacao. Ideias para explorar:
+Ja estao implementados:
 
-- Adicionar `spring-boot-starter-security` e configurar autenticacao (ex.: login com usuario/senha ou JWT).
-- Usar `UserRoles` para autorizar endpoints por papel (`@PreAuthorize`, `hasRole(...)`).
-- Adicionar validacao de entrada (`@NotBlank`, `@Email`, etc.) nos DTOs/entidades antes de persistir dados vindos de requisicoes.
+- `spring-boot-starter-security` como dependencia.
+- Um bean `PasswordEncoder` baseado em BCrypt.
+- `User.passwordHash`, com o getter ignorado pelo Jackson.
+- Busca de usuario por e-mail e carregamento de authorities pelo `DatabaseUserDetailsService`. Os nomes no banco sao convertidos para authorities com prefixo `ROLE_`.
+
+O proximo passo e criar uma `SecurityFilterChain` com HTTP Basic e regras iniciais para os endpoints: `/hello` publico, endpoints de produtos autenticados e `/users` restrito a `ADMIN`. A configuracao ainda nao existe; portanto, as authorities sao carregadas, mas ainda nao ha regras proprias de autorizacao por endpoint.
+
+Antes de testar com o banco, confirme que a coluna `password_hash` existe (o Hibernate esta configurado com `ddl-auto=none`) e que ha usuarios com hashes BCrypt e papeis associados em `user_roles`. Depois da cadeia de seguranca, validar respostas `401` (nao autenticado) e `403` (sem permissao) e decidir a politica de CSRF para os clientes da API.
+
+Validacao de entrada (`@NotBlank`, `@Email` etc.) continua como etapa posterior, preferencialmente aplicada a DTOs de requisicao.
