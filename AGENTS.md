@@ -35,6 +35,7 @@ src/main/java/com/example/demo/
 ├── DemoApplication.java
 ├── config/         configuracoes Spring
 ├── controller/     endpoints REST (@RestController)
+├── dto/            objetos de entrada e saida da API
 ├── model/          entidades JPA (@Entity)
 ├── repository/     interfaces JpaRepository
 └── service/        regras de negocio e integracoes com Spring
@@ -56,9 +57,20 @@ Novas classes devem seguir essa separacao por camada.
 - Nunca armazenar ou comparar senhas em texto puro. Usar o `PasswordEncoder` BCrypt para codificar e verificar senhas.
 - Nunca incluir o hash de senha em respostas da API; preferir DTOs para entrada e saida.
 - O `DatabaseUserDetailsService` carrega o usuario pelo e-mail e transforma papeis do banco em authorities com prefixo `ROLE_`.
-- A configuracao `SecurityFilterChain` e as regras de acesso por endpoint ainda sao o proximo passo de implementacao; nao presumir que as rotas ja tenham autorizacao por papel.
-- Ao configurar CSRF, considerar como os clientes da API enviarao requisicoes e nao desativar a protecao sem uma decisao consciente.
+- A `SecurityFilterChain` (`SecurityConfig`) usa HTTP Basic. `/hello`, `/csrf`, `/signup` e `/error` sao publicos, `/users` exige `ADMIN` e as demais rotas exigem autenticacao. A autenticacao basica esta concluida e foi verificada de ponta a ponta.
+- `/error` deve permanecer liberado; sem isso, erros reais (`400`, `403`, `409`) aparecem como `401`.
+- CSRF permanece ativo porque a API tambem sera consumida por navegador; nao desativar sem uma decisao consciente. Clientes obtem o token em `/csrf` e o enviam no header `X-CSRF-TOKEN` (com o cookie de sessao), nunca em `Authorization`/Bearer. O CSRF so e exigido em metodos que alteram dados.
+- O cadastro (`POST /signup`, DTO `NewUser`) grava o hash BCrypt e nao atribui papeis. O papel `ADMIN` e inserido manualmente em `user_roles`; o cadastro nunca deve permitir que o usuario escolha papeis. `roles.name` deve ser `ADMIN`, sem o prefixo `ROLE_` (o servico adiciona).
+- Diagnostico de `401`/`403`: `401` tambem ocorre em rotas publicas se o cliente enviar um `Authorization` Basic invalido; `403` em `/users` com login correto indica problema nos dados de `roles`/`user_roles` ou, em metodos que alteram dados, ausencia de token CSRF. Detalhes e SQL de verificacao no README.
 
+## Pendencias e proximos passos
+
+Detalhes completos na secao "Pendencias e proximos passos" do README. Ao ajudar, tratar como apoio: apontar problemas e diretrizes, deixando a implementacao com o autor, salvo pedido explicito.
+
+- `.env`: `.\mvnw.cmd test` nao carregou `DB_PORT`, `DB_USER` e `DB_PASSWORD` (erro `Access denied ... (using password: NO)`); funcionou com as variaveis exportadas no ambiente. Verificar `spring-boot:run` e, se necessario, usar versao mais recente do `spring-dotenv` ou `spring.config.import=optional:file:.env[.properties]`.
+- Testes de seguranca com MockMvc e `spring-security-test`: `401` sem login, `403` sem `ADMIN`, `200` com `ADMIN`, e `/signup` sem/com token CSRF, e-mail duplicado (`409`) e corpo invalido (`400`).
+- Melhorias: papel padrao no cadastro atribuido pelo servidor, politica de senha (`@Size`), DTO de saida no `/signup`, DTOs e `@Valid` em `ProductController`, padronizar erros de validacao, HTTPS em producao, limitar tentativas de login.
+- Front-end simples (futuro) para cadastro, login e tela restrita a `ADMIN`: obter token em `/csrf`, enviar cookies (`credentials: 'include'`), avaliar login com sessao em vez de HTTP Basic e, se houver outra origem, CORS restrito sem desativar o CSRF.
 ## Executar e testar
 
 ```powershell

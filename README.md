@@ -25,11 +25,15 @@ src/
 |  |- java/com/example/demo/
 |  |  |- DemoApplication.java
 |  |  |- config/
-|  |  |  `- PasswordEncoderConfig.java
+|  |  |  |- PasswordEncoderConfig.java
+|  |  |  `- SecurityConfig.java
 |  |  |- controller/
+|  |  |  |- CsrfController.java
 |  |  |  |- HelloController.java
 |  |  |  |- ProductController.java
 |  |  |  `- UserController.java
+|  |  |- dto/
+|  |  |  `- NewUser.java
 |  |  |- model/
 |  |  |  |- Product.java
 |  |  |  |- User.java
@@ -123,17 +127,81 @@ Em caso de erro `BUILD FAILURE`, verifique a mensagem: geralmente indica `groupI
 - Criar testes para endpoints HTTP.
 - Consultar endpoints do Actuator, como `http://localhost:8080/actuator/health`.
 
-## Autenticacao e autorizacao (em andamento)
+## Autenticacao e autorizacao
 
-Ja estao implementados:
+Status: **autenticacao basica concluida e verificada de ponta a ponta** (cadastro, login com HTTP Basic, papeis do banco e `/users` restrito a `ADMIN`).
+
+### O que esta implementado
 
 - `spring-boot-starter-security` como dependencia.
-- Um bean `PasswordEncoder` baseado em BCrypt.
-- `User.passwordHash`, com o getter ignorado pelo Jackson.
-- Busca de usuario por e-mail e carregamento de authorities pelo `DatabaseUserDetailsService`. Os nomes no banco sao convertidos para authorities com prefixo `ROLE_`.
+- Bean `PasswordEncoder` baseado em BCrypt (`PasswordEncoderConfig`).
+- `User.passwordHash`, com o getter ignorado pelo Jackson (o hash nunca sai nas respostas).
+- `DatabaseUserDetailsService`: busca o usuario por e-mail e le os papeis em `user_roles`/`roles`. O nome do papel no banco vira authority com prefixo `ROLE_`.
+- `SecurityConfig` com HTTP Basic e as regras:
 
-O proximo passo e criar uma `SecurityFilterChain` com HTTP Basic e regras iniciais para os endpoints: `/hello` publico, endpoints de produtos autenticados e `/users` restrito a `ADMIN`. A configuracao ainda nao existe; portanto, as authorities sao carregadas, mas ainda nao ha regras proprias de autorizacao por endpoint.
+| Rota | Acesso |
+|---|---|
+| `/hello`, `/csrf`, `/signup`, `/error` | publico |
+| `/users`, `/users/**` | papel `ADMIN` |
+| rotas de produtos e demais | autenticado |
 
-Antes de testar com o banco, confirme que a coluna `password_hash` existe (o Hibernate esta configurado com `ddl-auto=none`) e que ha usuarios com hashes BCrypt e papeis associados em `user_roles`. Depois da cadeia de seguranca, validar respostas `401` (nao autenticado) e `403` (sem permissao) e decidir a politica de CSRF para os clientes da API.
+- Protecao CSRF mantida, pois a API tambem sera consumida por navegador.
+- `POST /signup` (publico): recebe o DTO `NewUser` (`name`, `email`, `password`) validado com `@Valid` (`@NotBlank`, `@Email`), grava o hash BCrypt e retorna `409` se o e-mail ja existir. A coluna `users.email` tem constraint `UNIQUE` (verificado).
+- O cadastro **nao** atribui papeis e nunca deve permitir que o cliente escolha um. O papel `ADMIN` e inserido manualmente em `user_roles`.
 
-Validacao de entrada (`@NotBlank`, `@Email` etc.) continua como etapa posterior, preferencialmente aplicada a DTOs de requisicao.
+### Como usar (Postman ou outro cliente)
+
+1. `GET /csrf` sem autenticacao. A resposta traz `headerName` (`X-CSRF-TOKEN`) e `token`, e o cookie `JSESSIONID`.
+2. `POST /signup` com **Auth type: No Auth**, o header `X-CSRF-TOKEN: <token>`, o cookie da etapa anterior e o corpo JSON `{"name": "...", "email": "...", "password": "..."}`.
+3. No banco, associe o usuario ao papel `ADMIN`: `roles.name` deve ser exatamente `ADMIN` (nao `ROLE_ADMIN`), e deve existir a linha correspondente em `user_roles`.
+4. `GET /users` com **Basic Auth** (e-mail e senha). O CSRF so e exigido em metodos que alteram dados, entao o header e desnecessario no `GET`.
+
+### Respostas e diagnostico
+
+- `401`: nao autenticado ou credenciais invalidas. Rotas publicas tambem retornam `401` se o cliente enviar um header `Authorization` Basic invalido (desativar a autenticacao herdada nessas rotas).
+- `403`: autenticado sem o papel exigido, ou requisicao que altera dados sem token CSRF valido. Se `/users` retornar `403` com login correto, verificar os dados de papel com:
+
+```sql
+SELECT u.id_user, u.email, ur.id_role, CONCAT('[', r.name, ']') AS role_name
+FROM users u
+LEFT JOIN user_roles ur ON ur.id_user = u.id_user
+LEFT JOIN roles r ON r.id_role = ur.id_role;
+```
+
+  Causas comuns: nome gravado como `ROLE_ADMIN` (vira `ROLE_ROLE_ADMIN`), grafia/caixa/espaco diferente, ou `user_roles` ligado a outro `id_user`. As authorities sao lidas a cada requisicao, sem reiniciar a aplicacao.
+- O token CSRF vai em `X-CSRF-TOKEN` (com o cookie de sessao), **nunca** em `Authorization`/Bearer.
+- `/error` precisa estar liberado em `SecurityConfig`; sem isso, erros reais (`400`, `403`, `409`) apareciam como `401`.
+
+## Pendencias e proximos passos
+
+### Variaveis do `.env`
+
+Em um teste com `.\mvnw.cmd test`, `DB_PORT`, `DB_USER` e `DB_PASSWORD` nao chegaram ao Spring (erro `Access denied for user '<usuario do SO>'@'localhost' (using password: NO)`); o teste passou ao exportar as variaveis no ambiente manualmente. Confirmar se `spring-boot:run` e os testes carregam o `.env`. Se nao, testar uma versao mais recente do `spring-dotenv` ou usar `spring.config.import=optional:file:.env[.properties]`.
+
+### Testes automatizados de seguranca
+
+Hoje so existe `contextLoads`, e o fluxo foi validado manualmente. Cobrir com MockMvc e `spring-security-test` (nova dependencia de teste):
+
+- `401` sem login em rota protegida.
+- `403` com usuario autenticado sem o papel `ADMIN` em `/users`.
+- `200` com papel `ADMIN` em `/users`.
+- `/signup` sem token CSRF retorna `403`; com token valido e corpo valido retorna `200`; e-mail duplicado retorna `409`; corpo invalido retorna `400`.
+- Rotas publicas (`/hello`, `/csrf`) acessiveis sem login.
+
+### Melhorias de seguranca
+
+- **Papel padrao no cadastro:** decidir se todo novo usuario recebe um papel basico (ex.: `USER`), sempre atribuido pelo servidor.
+- **Politica de senha:** adicionar tamanho minimo (`@Size`) e, se desejado, outras regras ao `NewUser`.
+- **DTO de saida no `/signup`:** hoje retorna a entidade `User` (seguro por causa do `@JsonIgnore`); preferir um DTO de resposta.
+- **Demais endpoints:** `ProductController` ainda recebe e retorna entidades JPA e nao valida entrada; migrar para DTOs com `@Valid`. Seus `POST` tambem exigem o token CSRF.
+- **Respostas de erro:** padronizar o formato dos erros de validacao.
+- **Producao:** HTTP Basic envia as credenciais a cada requisicao; usar somente com HTTPS. Avaliar limitar tentativas de login e, mais adiante, migrar para sessao ou JWT.
+
+### Front-end simples (futuro)
+
+Criar uma aplicacao web simples para exercitar o fluxo pelo navegador:
+
+- Telas de cadastro e login, e uma tela restrita que consome `/users` (visivel apenas para `ADMIN`).
+- Obter o token em `/csrf` e envia-lo no header `X-CSRF-TOKEN` nas chamadas que alteram dados, enviando os cookies (`credentials: 'include'` em `fetch`).
+- Definir a estrategia de autenticacao no navegador: HTTP Basic reenvia as credenciais a cada chamada e nao tem logout real; considerar migrar para login com sessao (`formLogin`/endpoint de login) ao implementar o front.
+- Se o front rodar em outra origem (ex.: servidor de desenvolvimento em outra porta), configurar CORS de forma restrita, permitindo credenciais apenas para a origem conhecida, sem desativar o CSRF.
