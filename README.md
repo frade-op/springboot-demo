@@ -53,6 +53,8 @@ src/
       `- DemoApplicationTests.java
 ```
 
+Na raiz tambem ficam as regras de estilo para assistentes de codificacao (`AGENTS.md`, `.github/`, `.cursor/`, `.windsurf/`, `.clinerules/` e `.opencode/`), descritas na secao [Regras para assistentes](#regras-para-assistentes-caveman).
+
 A classe `DemoApplication` e o ponto de entrada da aplicacao. Controllers, models e repositories ficam separados por camada dentro de `com.example.demo`, para serem encontrados automaticamente pelo Spring Boot.
 
 ## Modelo de dados atual
@@ -119,6 +121,21 @@ Se quiser apenas baixar as dependencias, sem compilar nem testar:
 ```
 
 Em caso de erro `BUILD FAILURE`, verifique a mensagem: geralmente indica `groupId`/`artifactId` incorretos ou versao ausente para dependencias que nao sao gerenciadas pelo parent do Spring Boot.
+
+## Regras para assistentes (caveman)
+
+O repositorio versiona a regra "caveman", que pede respostas curtas e diretas dos assistentes de IA, sem perder o conteudo tecnico. Como o projeto e de estudo e nao uma aplicacao real, os arquivos ficam commitados:
+
+| Ferramenta | Arquivo |
+|---|---|
+| Geral / varias ferramentas | `AGENTS.md` (bloco `caveman-begin`/`caveman-end` no fim) |
+| GitHub Copilot | `.github/copilot-instructions.md` |
+| Cursor | `.cursor/rules/caveman.mdc` |
+| Windsurf | `.windsurf/rules/caveman.md` |
+| Cline | `.clinerules/caveman.md` |
+| OpenCode | `.opencode/AGENTS.md` |
+
+A regra afeta apenas o estilo das respostas; codigo, comentarios, commits, PRs e documentacao continuam em modo normal. Para desativar numa conversa, use "stop caveman" ou "normal mode". Os blocos entre os marcadores sao gerenciados pela instalacao: nao edite manualmente.
 
 ## Proximos experimentos
 

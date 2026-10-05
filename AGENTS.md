@@ -71,6 +71,19 @@ Detalhes completos na secao "Pendencias e proximos passos" do README. Ao ajudar,
 - Testes de seguranca com MockMvc e `spring-security-test`: `401` sem login, `403` sem `ADMIN`, `200` com `ADMIN`, e `/signup` sem/com token CSRF, e-mail duplicado (`409`) e corpo invalido (`400`).
 - Melhorias: papel padrao no cadastro atribuido pelo servidor, politica de senha (`@Size`), DTO de saida no `/signup`, DTOs e `@Valid` em `ProductController`, padronizar erros de validacao, HTTPS em producao, limitar tentativas de login.
 - Front-end simples (futuro) para cadastro, login e tela restrita a `ADMIN`: obter token em `/csrf`, enviar cookies (`credentials: 'include'`), avaliar login com sessao em vez de HTTP Basic e, se houver outra origem, CORS restrito sem desativar o CSRF.
+## Regras de estilo para assistentes (caveman)
+
+O projeto versiona a regra "caveman", que pede respostas curtas e diretas dos assistentes (sem cerimonia, mantendo o conteudo tecnico). Por ser um projeto de estudo, e nao uma aplicacao real, os arquivos ficam no repositorio, um por ferramenta:
+
+- `AGENTS.md` (bloco entre `<!-- caveman-begin -->` e `<!-- caveman-end -->`, no fim deste arquivo)
+- `.github/copilot-instructions.md` (GitHub Copilot)
+- `.cursor/rules/caveman.mdc` (Cursor)
+- `.windsurf/rules/caveman.md` (Windsurf)
+- `.clinerules/caveman.md` (Cline)
+- `.opencode/AGENTS.md` (OpenCode)
+
+A propria regra define que codigo, comentarios, commits, PRs e documentacao sao escritos em modo normal; ela vale so para o estilo das respostas. Nao editar manualmente os blocos entre os marcadores `caveman-begin`/`caveman-end`, pois sao gerenciados pela instalacao e podem ser sobrescritos. Para desativar, usar "stop caveman" ou "normal mode" na conversa.
+
 ## Executar e testar
 
 ```powershell
@@ -78,3 +91,26 @@ Detalhes completos na secao "Pendencias e proximos passos" do README. Ao ajudar,
 .\mvnw.cmd test
 .\mvnw.cmd compile
 ```
+
+<!-- caveman-begin -->
+Respond terse like smart caveman. All technical substance stay. Only fluff die.
+
+Rules:
+- Answer first: Answer, then reason, then next step.
+- Kill ceremony: No greeting, hedging, pleasantries, recap, or closer.
+- Short word: "fix" not "implement a solution for".
+- Articles optional, meaning never: Drop a/an/the when the sentence still reads in one pass.
+- One idea per sentence: ASD-STE100 is the floor: 20 words max, active voice, imperative for instructions, one term per thing, pronoun only with an obvious referent.
+- Payload verbatim: Code blocks unchanged.
+- Tool runs: bounded status: No text between routine calls.
+- User's language: Compress the style, not the language.
+- Never perform caveman: No "caveman mode on", no "me think", no "Caveman:" prefix, no normal answer plus caveman copy.
+
+Switch: /caveman (default), /ultracave (fragments, each fact once), /megacave (Classical Chinese 文言文)
+Stop: "stop caveman" or "normal mode"
+
+Auto-Clarity: plain prose for security warnings, irreversible actions, step order a fragment could scramble, user confused. Resume after.
+
+Boundaries: code, comments, commits, PRs, docs written normal.
+Floor: code, commands, paths, numbers and error strings verbatim; never drop not/never/no/only.
+<!-- caveman-end -->
