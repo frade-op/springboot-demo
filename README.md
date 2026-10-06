@@ -1,8 +1,17 @@
 # Spring Boot Demo
 
-Projeto base para experimentos e aprendizado com Spring Boot. Use este repositório para criar endpoints, explorar configuracoes, escrever testes e entender o ciclo de desenvolvimento de uma aplicacao web Java.
+Projeto de estudo com Spring Boot cujo objetivo e construir a API de catalogo de produtos de uma pequena loja de materiais de construcao. O sistema deve aplicar papeis e um fluxo de aprovacao para alteracoes no catalogo.
 
 > **Sobre o uso de assistentes de codificação:** este é um projeto de estudo. A maior parte do código é escrita e pensada pelo autor, estudando os padrões corretos antes de aplicá-los. Os assistentes são usados como apoio pontual — para validar decisões, explicar erros e sugerir boas práticas — não para gerar funcionalidades do zero. Veja [AGENTS.md](AGENTS.md) para as diretrizes de colaboração.
+
+## Objetivo e regras de negocio
+
+- Representar o catalogo de produtos de uma pequena loja de materiais de construcao, incluindo nome, descricao e valor.
+- `USER` pode consultar o catalogo e ver os valores dos produtos. O cadastro publico cria somente usuarios `USER`.
+- `STAFF` pode propor alteracoes de nome, descricao e valor. As propostas nao alteram o catalogo publicado ate um `ADMIN` aprova-las.
+- `ADMIN` aprova ou rejeita propostas e cria usuarios `STAFF`.
+- Deve existir ao menos um `ADMIN` provisionado diretamente na base de dados. Nenhuma request pode criar um usuario `ADMIN` ou escolher um papel.
+- O cadastro de `USER` e livre; a criacao de `STAFF` e restrita a `ADMIN`.
 
 ## Tecnologias
 
@@ -13,7 +22,7 @@ Projeto base para experimentos e aprendizado com Spring Boot. Use este repositó
 - Spring Boot Actuator, para recursos de monitoramento
 - Spring Web MVC Test, para testes da camada web
 - Spring Data JPA, para persistencia com Hibernate
-- Spring Security, para autenticacao e autorizacao (em implementacao)
+- Spring Security, para autenticacao e autorizacao (autenticacao basica implementada; papeis do catalogo pendentes)
 - Spring Boot Validation, para validar dados de entrada
 - MySQL Connector/J (`com.mysql:mysql-connector-j`), driver de conexao com MySQL
 
@@ -79,7 +88,7 @@ spring.jpa.hibernate.ddl-auto=none
 spring.jpa.show-sql=true
 ```
 
-As credenciais sao lidas de variaveis locais e nao devem ser adicionadas ao repositorio. Como `ddl-auto=none`, alteracoes no schema MySQL precisam ser feitas manualmente.
+As credenciais sao lidas de variaveis locais e nao devem ser adicionadas ao repositorio. Como `ddl-auto=none`, alteracoes no schema MySQL precisam ser feitas manualmente. A intencao e adotar Liquibase futuramente para versionar e aplicar as mudancas de schema; ele ainda nao esta configurado.
 
 Sem configuracao diferente, a aplicacao inicia na porta `8080` por padrao.
 
@@ -137,13 +146,6 @@ O repositorio versiona a regra "caveman", que pede respostas curtas e diretas do
 
 A regra afeta apenas o estilo das respostas; codigo, comentarios, commits, PRs e documentacao continuam em modo normal. Para desativar numa conversa, use "stop caveman" ou "normal mode". Os blocos entre os marcadores sao gerenciados pela instalacao: nao edite manualmente.
 
-## Proximos experimentos
-
-- Criar controllers para `Role` e `UserRoles` (ainda so existem os repositories).
-- Adicionar propriedades ao `application.properties`, como `server.port`.
-- Criar testes para endpoints HTTP.
-- Consultar endpoints do Actuator, como `http://localhost:8080/actuator/health`.
-
 ## Autenticacao e autorizacao
 
 Status: **autenticacao basica concluida e verificada de ponta a ponta** (cadastro, login com HTTP Basic, papeis do banco e `/users` restrito a `ADMIN`).
@@ -170,8 +172,8 @@ Status: **autenticacao basica concluida e verificada de ponta a ponta** (cadastr
 
 1. `GET /csrf` sem autenticacao. A resposta traz `headerName` (`X-CSRF-TOKEN`) e `token`, e o cookie `JSESSIONID`.
 2. `POST /signup` com **Auth type: No Auth**, o header `X-CSRF-TOKEN: <token>`, o cookie da etapa anterior e o corpo JSON `{"name": "...", "email": "...", "password": "..."}`.
-3. No banco, associe o usuario ao papel `ADMIN`: `roles.name` deve ser exatamente `ADMIN` (nao `ROLE_ADMIN`), e deve existir a linha correspondente em `user_roles`.
-4. `GET /users` com **Basic Auth** (e-mail e senha). O CSRF so e exigido em metodos que alteram dados, entao o header e desnecessario no `GET`.
+3. O usuario criado por `/signup` nao recebe papel atualmente. Nao o promova a `ADMIN`: mantenha um `ADMIN` provisionado diretamente na base e use essa conta para testar `/users`. A futura implementacao deve atribuir `USER` no cadastro.
+4. `GET /users` com **Basic Auth** da conta `ADMIN` preexistente (e-mail e senha). O CSRF so e exigido em metodos que alteram dados, entao o header e desnecessario no `GET`.
 
 ### Respostas e diagnostico
 
@@ -205,14 +207,24 @@ Hoje so existe `contextLoads`, e o fluxo foi validado manualmente. Cobrir com Mo
 - `/signup` sem token CSRF retorna `403`; com token valido e corpo valido retorna `200`; e-mail duplicado retorna `409`; corpo invalido retorna `400`.
 - Rotas publicas (`/hello`, `/csrf`) acessiveis sem login.
 
-### Melhorias de seguranca
+### Roteiro para o catalogo e a base de dados
 
-- **Papel padrao no cadastro:** decidir se todo novo usuario recebe um papel basico (ex.: `USER`), sempre atribuido pelo servidor.
-- **Politica de senha:** adicionar tamanho minimo (`@Size`) e, se desejado, outras regras ao `NewUser`.
-- **DTO de saida no `/signup`:** hoje retorna a entidade `User` (seguro por causa do `@JsonIgnore`); preferir um DTO de resposta.
-- **Demais endpoints:** `ProductController` ainda recebe e retorna entidades JPA e nao valida entrada; migrar para DTOs com `@Valid`. Seus `POST` tambem exigem o token CSRF.
-- **Respostas de erro:** padronizar o formato dos erros de validacao.
-- **Producao:** HTTP Basic envia as credenciais a cada requisicao; usar somente com HTTPS. Avaliar limitar tentativas de login e, mais adiante, migrar para sessao ou JWT.
+O banco e gerido manualmente (`ddl-auto=none`) por enquanto. A intencao e adotar Liquibase futuramente para versionar e aplicar as mudancas de schema. Ate essa adocao, antes de alterar tabelas, conferir o schema real com `SHOW CREATE TABLE`, identificar dados existentes e fazer backup. Registrar cada alteracao em script SQL versionado e aplica-lo de forma controlada; nao habilitar atualizacao automatica do Hibernate.
+
+1. **Corrigir e completar o schema:** garantir `products.name`, `products.description`, `products.price` com tipo decimal adequado a dinheiro e `products.id_category`; criar `categories` se ainda nao existir. Adicionar chaves estrangeiras para categorias. Confirmar `users.email` como `UNIQUE` e `users.password_hash` existente.
+2. **Fortalecer papeis e associacoes:** inserir exatamente `USER`, `STAFF` e `ADMIN` em `roles` (sem prefixo `ROLE_`); garantir `UNIQUE` em `roles.name`, chaves estrangeiras em `user_roles` para `users` e `roles`, e unicidade do par usuario/papel. Conferir dados existentes antes de adicionar constraints. Provisionar pelo menos um `ADMIN` diretamente no banco, com senha BCrypt; requests nao podem atribuir esse papel.
+3. **Mapear o catalogo:** alinhar entidades e relacionamentos JPA com tabelas e constraints, incluindo `Category`; usar `BigDecimal` para valores monetarios. Adicionar DTOs validados para produtos e categorias, sem expor entidades diretamente.
+4. **Aplicar papeis na API:** atribuir `USER` pelo servidor durante `/signup`; criar endpoint de criacao de `STAFF` acessivel somente a `ADMIN`. Nunca aceitar papel enviado pelo cliente. Restringir consulta do catalogo a usuarios autenticados com papel permitido e escritas a `STAFF` ou `ADMIN`, conforme regras acima.
+5. **Criar fluxo de aprovacao:** adicionar tabela de propostas de alteracao ligada ao produto e ao `STAFF` autor, com valores propostos, estado (`PENDING`, `APPROVED`, `REJECTED`), revisor e datas. `STAFF` cria propostas; `ADMIN` aprova ou rejeita. Aplicar os valores aprovados ao catalogo em transacao; nunca atualizar produto publicado ao receber proposta.
+6. **Testar autorizacao e integridade:** cobrir cadastro livre de `USER`, proibicao de papel enviado, criacao de `STAFF` somente por `ADMIN`, leitura por `USER`, proposta por `STAFF`, aprovacao/rejeicao por `ADMIN`, CSRF, validacoes, constraints e atualizacao atomica do catalogo.
+7. **Preparar execucao segura:** resolver carregamento de `.env` nos testes e `spring-boot:run`, usar HTTPS em producao e avaliar limite de tentativas de login. Manter CSRF ativo para clientes navegador.
+
+### Outras pendencias
+
+- Adicionar tamanho minimo de senha (`@Size`) e DTO de resposta para `/signup`.
+- Padronizar respostas de erro de validacao.
+- Cobrir com MockMvc os casos de autenticacao existentes: `401` sem login, `403` sem papel e respostas de sucesso com papel autorizado.
+- Consultar endpoints do Actuator, como `http://localhost:8080/actuator/health`.
 
 ### Front-end simples (futuro)
 

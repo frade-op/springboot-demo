@@ -4,7 +4,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
+import com.example.demo.model.User;
+import com.example.demo.model.Role;
 
 @Entity
 @Table(name = "user_roles")
@@ -14,9 +19,13 @@ public class UserRoles {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idUserRole;
 
-    private Long idUser;
+    @ManyToOne 
+    @JoinColumn(name = "id_user")
+    private User user;
 
-    private Long idRole;
+    @ManyToOne 
+    @JoinColumn(name = "id_role")
+    private Role role;
 
     public Long getIdUserRole() {
         return idUserRole;
@@ -26,19 +35,19 @@ public class UserRoles {
         this.idUserRole = idUserRole;
     }
 
-    public Long getIdUser() {
-        return idUser;
+    public User getUser() {
+        return user;
     }
 
-    public void setIdUser(Long idUser) {
-        this.idUser = idUser;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public Long getIdRole() {
-        return idRole;
+    public Role getRole() {
+        return role;
     }
 
-    public void setIdRole(Long idRole) {
-        this.idRole = idRole;
+    public void setRole(Role role) {
+        this.role = role;
     }
 }

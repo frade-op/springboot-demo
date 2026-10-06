@@ -2,10 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.repository.UserRepository;
 import com.example.demo.repository.UserRolesRepository;
-import com.example.demo.repository.RoleRepository;
 import com.example.demo.model.User;
-import com.example.demo.model.UserRoles;
-import com.example.demo.model.Role;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,12 +17,10 @@ import org.springframework.stereotype.Service;
 public class DatabaseUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
     private final UserRolesRepository userRolesRepository;
-    private final RoleRepository roleRepository;
 
-    public DatabaseUserDetailsService(UserRepository userRepository, UserRolesRepository userRolesRepository, RoleRepository roleRepository) {
+    public DatabaseUserDetailsService(UserRepository userRepository, UserRolesRepository userRolesRepository) {
         this.userRepository = userRepository;
         this.userRolesRepository = userRolesRepository;
-        this.roleRepository = roleRepository;
     }
 
     @Override
@@ -35,14 +30,10 @@ public class DatabaseUserDetailsService implements UserDetailsService {
                 "User not found with email: " + username));
         
         List<SimpleGrantedAuthority> authorities =
-            userRolesRepository.findAllByIdUser(account.getIdUser())
+            userRolesRepository.findAllByUser(account)
                 .stream()
-                .map(userRole -> userRole.getIdRole())
-                .map(roleId -> roleRepository.findById(roleId)
-                    .orElseThrow(() -> new IllegalStateException(
-                        "Role not found with id: " + roleId)))
-                .map(role -> role.getName())
-                .map(name -> new SimpleGrantedAuthority("ROLE_" + name))
+                .map(userRole -> new SimpleGrantedAuthority(
+                    "ROLE_" + userRole.getRole().getName()))
                 .toList();
 
         return org.springframework.security.core.userdetails.User

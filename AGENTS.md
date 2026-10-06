@@ -6,6 +6,8 @@ Contexto para assistentes de codificacao que auxiliarem neste repositorio.
 
 Projeto pessoal de estudo de Spring Boot. O objetivo principal e aprendizado: a maior parte do codigo, das decisoes de arquitetura e da implementacao e escrita e pensada pelo proprio autor, estudando os padroes corretos antes de aplica-los.
 
+O sistema de estudo representa o catalogo de produtos de uma pequena loja de materiais de construcao. `USER` consulta produtos e valores; `STAFF` propoe alteracoes de nome, descricao e valor; `ADMIN` aprova ou rejeita essas propostas, que so atualizam o catalogo publicado apos aprovacao. `ADMIN` tambem cria usuarios `STAFF`. O cadastro publico cria somente `USER`; deve existir um `ADMIN` provisionado diretamente na base, nunca por request.
+
 **Os assistentes devem atuar como apoio, nao como autores principais do codigo.** Use-os para:
 
 - Validar ou revisar codigo ja escrito pelo autor.
@@ -48,6 +50,7 @@ Novas classes devem seguir essa separacao por camada.
 - MySQL local, schema `springboot-demo`.
 - Conexao configurada em `src/main/resources/application.properties`, usando variaveis `DB_PORT`, `DB_USER`, `DB_PASSWORD` carregadas do `.env` (arquivo nao versionado, listado no `.gitignore`).
 - `spring.jpa.hibernate.ddl-auto=none`: o Hibernate nao cria nem altera tabelas automaticamente. As tabelas ja existem no schema e sao geridas manualmente.
+- Intencao futura: adotar Liquibase para versionar e aplicar mudancas no schema. Ainda nao esta configurado; ate la, gerir alteracoes manualmente e manter `ddl-auto=none`.
 - Colunas no banco usam `snake_case` (ex.: `id_user`). Campos das entidades JPA devem usar `camelCase` (ex.: `idUser`); a estrategia padrao do Spring Boot converte entre os formatos sem precisar de `@Column` quando seguem essa convencao.
 - A entidade `User` possui `passwordHash`, mapeado para `password_hash`; essa coluna deve existir no banco antes de executar consultas que a utilizem.
 
@@ -61,6 +64,7 @@ Novas classes devem seguir essa separacao por camada.
 - `/error` deve permanecer liberado; sem isso, erros reais (`400`, `403`, `409`) aparecem como `401`.
 - CSRF permanece ativo porque a API tambem sera consumida por navegador; nao desativar sem uma decisao consciente. Clientes obtem o token em `/csrf` e o enviam no header `X-CSRF-TOKEN` (com o cookie de sessao), nunca em `Authorization`/Bearer. O CSRF so e exigido em metodos que alteram dados.
 - O cadastro (`POST /signup`, DTO `NewUser`) grava o hash BCrypt e nao atribui papeis. O papel `ADMIN` e inserido manualmente em `user_roles`; o cadastro nunca deve permitir que o usuario escolha papeis. `roles.name` deve ser `ADMIN`, sem o prefixo `ROLE_` (o servico adiciona).
+- Objetivo futuro: atribuir `USER` no cadastro publico pelo servidor; somente `ADMIN` pode criar `STAFF`; nunca criar `ADMIN` por request. Propostas de alteracao feitas por `STAFF` nao podem modificar produtos publicados antes da aprovacao de `ADMIN`.
 - Diagnostico de `401`/`403`: `401` tambem ocorre em rotas publicas se o cliente enviar um `Authorization` Basic invalido; `403` em `/users` com login correto indica problema nos dados de `roles`/`user_roles` ou, em metodos que alteram dados, ausencia de token CSRF. Detalhes e SQL de verificacao no README.
 
 ## Pendencias e proximos passos
@@ -69,7 +73,9 @@ Detalhes completos na secao "Pendencias e proximos passos" do README. Ao ajudar,
 
 - `.env`: `.\mvnw.cmd test` nao carregou `DB_PORT`, `DB_USER` e `DB_PASSWORD` (erro `Access denied ... (using password: NO)`); funcionou com as variaveis exportadas no ambiente. Verificar `spring-boot:run` e, se necessario, usar versao mais recente do `spring-dotenv` ou `spring.config.import=optional:file:.env[.properties]`.
 - Testes de seguranca com MockMvc e `spring-security-test`: `401` sem login, `403` sem `ADMIN`, `200` com `ADMIN`, e `/signup` sem/com token CSRF, e-mail duplicado (`409`) e corpo invalido (`400`).
-- Melhorias: papel padrao no cadastro atribuido pelo servidor, politica de senha (`@Size`), DTO de saida no `/signup`, DTOs e `@Valid` em `ProductController`, padronizar erros de validacao, HTTPS em producao, limitar tentativas de login.
+- Preparacao para o catalogo: inspecionar e fazer backup do schema MySQL; versionar scripts SQL ate adotar Liquibase; garantir produto com descricao e preco decimal, categorias e chaves estrangeiras; garantir papeis `USER`, `STAFF`, `ADMIN`, restricoes unicas e integridade de `user_roles`; provisionar `ADMIN` diretamente no banco.
+- Implementar fluxo de negocio: atribuir `USER` no cadastro; permitir criacao de `STAFF` apenas por `ADMIN`; validar DTOs de produto; armazenar propostas de `STAFF` separadas do catalogo publicado; aplicar aprovacao/rejeicao de `ADMIN` em transacao.
+- Cobrir permissao por papel, CSRF, validacao, constraints e fluxo de aprovacao; adicionar politica de senha (`@Size`), DTO de saida no `/signup`, padronizar erros, usar HTTPS em producao e avaliar limite de tentativas de login. O roteiro detalhado fica no README.
 - Front-end simples (futuro) para cadastro, login e tela restrita a `ADMIN`: obter token em `/csrf`, enviar cookies (`credentials: 'include'`), avaliar login com sessao em vez de HTTP Basic e, se houver outra origem, CORS restrito sem desativar o CSRF.
 ## Regras de estilo para assistentes (caveman)
 
